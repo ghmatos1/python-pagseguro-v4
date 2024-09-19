@@ -35,7 +35,7 @@ class PagSeguro(object):
         self.config = Config(**config)
         self.headers = {
             "accept": "*/*",
-            "Authorization": f"Bearer {token}",
+            "Authorization": "Bearer %s" % token,
             "Content-type": "application/json",
         }
 
@@ -126,7 +126,7 @@ class PagSeguro(object):
             params["charges"] = []
             charge = {}
             charge["reference_id"] = self.payment.get("reference_id", "")
-            charge["amount"] = self.payment.get("amount")
+            # charge["amount"] = self.payment.get("amount")
             charge["payment_method"] = self.payment.get("method")
             params["charges"].append(charge)
 
