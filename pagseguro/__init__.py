@@ -106,7 +106,7 @@ class PagSeguro(object):
             params["redirectURL"] = self.redirect_url
 
         if self.notification_url:
-            params["notification_urls"] = self.notification_url
+            params["notification_urls"] = [self.notification_url]
 
         if self.abandon_url:
             params["notifcation_urls"] = [self.abandon_url]
@@ -126,7 +126,7 @@ class PagSeguro(object):
             params["charges"] = []
             charge = {}
             charge["reference_id"] = self.payment.get("reference_id", "")
-            # charge["amount"] = self.payment.get("amount")
+            charge["amount"] = self.payment.get("amount")
             charge["payment_method"] = self.payment.get("method")
             params["charges"].append(charge)
 
@@ -237,7 +237,7 @@ class PagSeguro(object):
 
     def checkout(self, transparent=False, **kwargs):
         """create a pagseguro checkout"""
-        self.data["currency"] = self.config.CURRENCY
+        # self.data["currency"] = self.config.CURRENCY
         self.build_checkout_params(**kwargs)
         if transparent:
             response = self.post(url=self.config.ORDER_URL)
