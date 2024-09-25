@@ -26,8 +26,8 @@ class XMLParser(object):
             logger.debug('Cannot parse the returned xml "%s" -> "%s"', xml, e)
             parsed = {}
 
-        if 'errors' in parsed:
-            self.errors = parsed['errors']['error']
+        if "errors" in parsed:
+            self.errors = parsed["errors"]["error"]
 
         return parsed
 
@@ -40,7 +40,7 @@ class PagSeguroNotificationResponse(XMLParser):
         parsed = super(PagSeguroNotificationResponse, self).parse_xml(xml)
         if self.errors:
             return
-        transaction = parsed.get('transaction', {})
+        transaction = parsed.get("transaction", {})
         for k, v in transaction.items():
             setattr(self, k, v)
 
@@ -50,11 +50,10 @@ class PagSeguroPreApprovalNotificationResponse(XMLParser):
         getattr(self, key, None)
 
     def parse_xml(self, xml):
-        parsed = super(PagSeguroPreApprovalNotificationResponse,
-                       self).parse_xml(xml)
+        parsed = super(PagSeguroPreApprovalNotificationResponse, self).parse_xml(xml)
         if self.errors:
             return
-        transaction = parsed.get('transaction', {})
+        transaction = parsed.get("transaction", {})
         for k, v in transaction.items():
             setattr(self, k, v)
 
@@ -67,7 +66,7 @@ class PagSeguroPreApprovalCancel(XMLParser):
         parsed = super(PagSeguroPreApprovalCancel, self).parse_xml(xml)
         if self.errors:
             return
-        transaction = parsed.get('transaction', {})
+        transaction = parsed.get("transaction", {})
         for k, v in transaction.items():
             setattr(self, k, v)
 
@@ -81,8 +80,8 @@ class PagSeguroCheckoutSession(XMLParser):
         parsed = super(PagSeguroCheckoutSession, self).parse_xml(xml)
         if self.errors:
             return
-        session = parsed.get('session', {})
-        self.session_id = session.get('id')
+        session = parsed.get("session", {})
+        self.session_id = session.get("id")
 
 
 class PagSeguroPreApprovalPayment(XMLParser):
@@ -94,33 +93,36 @@ class PagSeguroPreApprovalPayment(XMLParser):
         parsed = super(PagSeguroPreApprovalPayment, self).parse_xml(xml)
         if self.errors:
             return
-        result = parsed.get('result', {})
-        self.code = result.get('transactionCode')
-        self.date = parse_date(result.get('date'))
+        result = parsed.get("result", {})
+        self.code = result.get("transactionCode")
+        self.date = parse_date(result.get("date"))
 
 
-class PagSeguroCheckoutResponse(XMLParser):
-    def __init__(self, xml, config=None):
-        self.code = None
+class PagSeguroCheckoutResponse:
+    def __init__(self, response, config=None):
+        self.id = None
         self.date = None
         self.payment_url = None
         self.payment_link = None
         self.transaction = None
-        super(PagSeguroCheckoutResponse, self).__init__(xml, config)
+        self.errors = None
 
-    def parse_xml(self, xml):
-        parsed = super(PagSeguroCheckoutResponse, self).parse_xml(xml)
-        if self.errors:
+        if response.get("error_messages", None):
+            self.errors = response.get("error_messages")
             return
-        checkout = parsed.get('checkout', {})
-        self.code = checkout.get('code')
-        self.date = parse_date(checkout.get('date'))
 
-        self.payment_url = self.config.PAYMENT_URL % self.code
+        self.id = response.get("id", None)
+        self.reference = response.get("reference_id", None)
+        self.date = response.get("date")
+        self.customer = response.get("customer", {})
+        self.items = response.get("items", [])
+        self.shipping = response.get("shipping", {})
+        self.charges = response.get("charges", None)
+        self.links = response.get("links", [])
 
-        # this is used only for transparent checkout process
-        self.transaction = parsed.get('transaction', {})
-        self.payment_link = self.transaction.get('paymentLink')
+        for link in response.get("links"):
+            if link.get("rel") == "PAY":
+                self.payment_link = link.get("href")
 
 
 class PagSeguroTransactionSearchResult(XMLParser):
@@ -136,18 +138,18 @@ class PagSeguroTransactionSearchResult(XMLParser):
         parsed = super(PagSeguroTransactionSearchResult, self).parse_xml(xml)
         if self.errors:
             return
-        search_result = parsed.get('transactionSearchResult', {})
-        self.transactions = search_result.get('transactions', {})
-        self.transactions = self.transactions.get('transaction', [])
+        search_result = parsed.get("transactionSearchResult", {})
+        self.transactions = search_result.get("transactions", {})
+        self.transactions = self.transactions.get("transaction", [])
         if not isinstance(self.transactions, list):
             self.transactions = [self.transactions]
-        self.current_page = search_result.get('currentPage', None)
+        self.current_page = search_result.get("currentPage", None)
         if self.current_page is not None:
             self.current_page = int(self.current_page)
-        self.results_in_page = search_result.get('resultsInThisPage', None)
+        self.results_in_page = search_result.get("resultsInThisPage", None)
         if self.results_in_page is not None:
             self.results_in_page = int(self.results_in_page)
-        self.total_pages = search_result.get('totalPages', None)
+        self.total_pages = search_result.get("totalPages", None)
         if self.total_pages is not None:
             self.total_pages = int(self.total_pages)
 
@@ -161,16 +163,16 @@ class PagSeguroPreApproval(XMLParser):
         parsed = super(PagSeguroPreApproval, self).parse_xml(xml)
         if self.errors:
             return
-        result = parsed.get('preApproval', {})
-        self.name = result.get('name', None)
-        self.code = result.get('code', None)
-        self.date = parse_date(result.get('date'))
-        self.tracker = result.get('tracker', None)
-        self.status = result.get('status', None)
-        self.reference = result.get('reference', None)
-        self.last_event_date = result.get('lastEventDate', None)
-        self.charge = result.get('charge', None)
-        self.sender = result.get('sender', {})
+        result = parsed.get("preApproval", {})
+        self.name = result.get("name", None)
+        self.code = result.get("code", None)
+        self.date = parse_date(result.get("date"))
+        self.tracker = result.get("tracker", None)
+        self.status = result.get("status", None)
+        self.reference = result.get("reference", None)
+        self.last_event_date = result.get("lastEventDate", None)
+        self.charge = result.get("charge", None)
+        self.sender = result.get("sender", {})
 
 
 class PagSeguroPreApprovalSearch(XMLParser):
@@ -187,17 +189,17 @@ class PagSeguroPreApprovalSearch(XMLParser):
         parsed = super(PagSeguroPreApprovalSearch, self).parse_xml(xml)
         if self.errors:
             return
-        search_result = parsed.get('preApprovalSearchResult', {})
-        self.pre_approvals = search_result.get('preApprovals', {})
-        self.pre_approvals = self.pre_approvals.get('preApproval', [])
+        search_result = parsed.get("preApprovalSearchResult", {})
+        self.pre_approvals = search_result.get("preApprovals", {})
+        self.pre_approvals = self.pre_approvals.get("preApproval", [])
         if not isinstance(self.pre_approvals, list):
             self.pre_approvals = [self.pre_approvals]
-        self.current_page = search_result.get('currentPage', None)
+        self.current_page = search_result.get("currentPage", None)
         if self.current_page is not None:
             self.current_page = int(self.current_page)
-        self.results_in_page = search_result.get('resultsInThisPage', None)
+        self.results_in_page = search_result.get("resultsInThisPage", None)
         if self.results_in_page is not None:
             self.results_in_page = int(self.results_in_page)
-        self.total_pages = search_result.get('totalPages', None)
+        self.total_pages = search_result.get("totalPages", None)
         if self.total_pages is not None:
             self.total_pages = int(self.total_pages)

@@ -58,10 +58,14 @@ class PagSeguro(object):
         self.pre_approval = {}
         self.checkout_session = None
         self.payment = {}
+        self.holder = {}
 
     def build_checkout_params(self, **kwargs):
         """build a dict with params"""
         params = kwargs or {}
+
+        if self.reference:
+            params["reference_id"] = self.reference
         if self.sender:
             params["customer"] = {}
             customer = params["customer"]
@@ -125,60 +129,23 @@ class PagSeguro(object):
         if self.payment:
             params["charges"] = []
             charge = {}
-            charge["reference_id"] = self.payment.get("reference_id", "")
             charge["amount"] = self.payment.get("amount")
             charge["payment_method"] = self.payment.get("method")
             params["charges"].append(charge)
+            if self.payment["method"] == "BOLETO":
+                charge["payment_method"]["holder"] = {}
+                charge["payment_method"]["holder"]["name"] = self.sender.get("name")
+                charge["payment_method"]["holder"]["tax_id"] = (
+                    is_valid_cnpj(self.sender.get("cnpj"))
+                    if is_valid_cnpj(self.sender.get("cnpj"))
+                    else is_valid_cpf(self.sender.get("cpf"))
+                )
+                charge["payment_method"]["holder"]["email"] = self.sender.get("email")
+                charge["payment_method"]["holder"]["address"] = params["shipping"][
+                    "address"
+                ]
 
-        # if self.credit_card:
-        #     params["billingAddressCountry"] = "BRA"
-
-        #     credit_card_keys_map = [
-        #         ("creditCardToken", "credit_card_token"),
-        #         ("installmentQuantity", "installment_quantity"),
-        #         ("installmentValue", "installment_value"),
-        #         ("noInterestInstallmentQuantity", "no_interest_installment_quantity"),
-        #         ("creditCardHolderName", "card_holder_name"),
-        #         ("creditCardHolderCPF", "card_holder_cpf"),
-        #         ("creditCardHolderBirthDate", "card_holder_birth_date"),
-        #         ("creditCardHolderAreaCode", "card_holder_area_code"),
-        #         ("creditCardHolderPhone", "card_holder_phone"),
-        #         ("billingAddressStreet", "billing_address_street"),
-        #         ("billingAddressNumber", "billing_address_number"),
-        #         ("billingAddressComplement", "billing_address_complement"),
-        #         ("billingAddressDistrict", "billing_address_district"),
-        #         ("billingAddressPostalCode", "billing_address_postal_code"),
-        #         ("billingAddressCity", "billing_address_city"),
-        #         ("billingAddressState", "billing_address_state"),
-        #     ]
-
-        #     for key_to_set, key_to_get in credit_card_keys_map:
-        #         params[key_to_set] = self.credit_card.get(key_to_get)
-
-        # if self.pre_approval:
-
-        #     params["preApprovalCharge"] = self.pre_approval.get("charge")
-        #     params["preApprovalName"] = self.pre_approval.get("name")
-        #     params["preApprovalDetails"] = self.pre_approval.get("details")
-        #     params["preApprovalAmountPerPayment"] = self.pre_approval.get(
-        #         "amount_per_payment"
-        #     )
-        #     params["preApprovalMaxAmountPerPayment"] = self.pre_approval.get(
-        #         "max_amount_per_payment"
-        #     )
-        #     params["preApprovalPeriod"] = self.pre_approval.get("period")
-        #     params["preApprovalMaxPaymentsPerPeriod"] = self.pre_approval.get(
-        #         "max_payments_per_period"
-        #     )
-        #     params["preApprovalMaxAmountPerPeriod"] = self.pre_approval.get(
-        #         "max_amount_per_period"
-        #     )
-        #     params["preApprovalInitialDate"] = self.pre_approval.get("initial_date")
-        #     params["preApprovalFinalDate"] = self.pre_approval.get("final_date")
-        #     params["preApprovalMaxTotalAmount"] = self.pre_approval.get(
-        #         "max_total_amount"
-        #     )
-
+        print(self.payment)
         self.data.update(params)
         self.clean_none_params()
 
@@ -230,19 +197,15 @@ class PagSeguro(object):
 
     def post(self, url):
         """do a post request"""
-        # print(url)
-        # print(self.data)
-        # url = "https://sandbox.api.pagseguro.com/orders"
         return requests.post(url, json=self.data, headers=self.headers)
 
     def checkout(self, transparent=False, **kwargs):
         """create a pagseguro checkout"""
-        # self.data["currency"] = self.config.CURRENCY
         self.build_checkout_params(**kwargs)
-        if transparent:
-            response = self.post(url=self.config.ORDER_URL)
-        else:
-            response = self.post(url=self.config.ORDER_URL)
+        response = self.post(url=self.config.ORDER_URL)
+
+        response_json = response.json()
+        response = PagSeguroCheckoutResponse(response_json, config=self.config)
         return response
 
     def transparent_checkout_session(self):
