@@ -5,6 +5,7 @@ class Config(dict):
 
         base_url = "https://ws.pagseguro.uol.com.br"
         payment_host = "https://pagseguro.uol.com.br"
+        notification_host = "https://ws.pagseguro.uol.com.br"
         if sandbox:
             base_url = "https://sandbox.api.pagseguro.com"
             payment_host = "https://sandbox.api.pagseguro.com"
@@ -13,7 +14,7 @@ class Config(dict):
         version = "/v2/"
         checkout_suffix = "{}checkout".format(version)
         session_checkout_suffix = "{}sessions/".format(version)
-        notification_suffix = "{}transactions/notifications/%s".format(version)
+        notification_suffix = "{}transactions/notifications/%s".format("/v3/")
         pre_approval_notification_suffix = "{}pre-approvals/" "notifications/%s".format(
             version
         )
@@ -33,7 +34,7 @@ class Config(dict):
             SESSION_CHECKOUT_URL="{}{}".format(base_url, session_checkout_suffix),
             TRANSPARENT_CHECKOUT_URL="{}{}".format(base_url, query_transaction_suffix),
             CHECKOUT_URL="{}{}".format(base_url, checkout_suffix),
-            NOTIFICATION_URL="{}{}".format(base_url, notification_suffix),
+            NOTIFICATION_URL="{}{}".format(notification_host, notification_suffix),
             PRE_APPROVAL_NOTIFICATION_URL="{}{}".format(
                 base_url, pre_approval_notification_suffix
             ),

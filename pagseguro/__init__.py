@@ -26,7 +26,7 @@ class PagSeguro(object):
     SEDEX = 2
     NONE = 3
 
-    def __init__(self, token, data=None, config=None):
+    def __init__(self, token, public_key=None, email=None, data=None, config=None):
 
         config = config or {}
         if not type(config) == dict:
@@ -38,9 +38,10 @@ class PagSeguro(object):
             "Authorization": "Bearer %s" % token,
             "Content-type": "application/json",
         }
-
+        self.public_key = public_key
         self.data = {}
         self.token = token
+        self.email = email
 
         if data and isinstance(data, dict):
             self.data.update(data)
