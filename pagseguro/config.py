@@ -6,9 +6,11 @@ class Config(dict):
         base_url = "https://ws.pagseguro.uol.com.br"
         payment_host = "https://pagseguro.uol.com.br"
         notification_host = "https://ws.pagseguro.uol.com.br"
+        subscription_host = "https://api.assinaturas.pagseguro.com"
         if sandbox:
             base_url = "https://sandbox.api.pagseguro.com"
             payment_host = "https://sandbox.api.pagseguro.com"
+            subscription_host = "https://sandbox.api.assinaturas.pagseguro.com"
 
         # prefixes/suffixes
         version = "/v2/"
@@ -25,6 +27,9 @@ class Config(dict):
         # default config settings
         defaults = dict(
             ORDER_URL="{}/{}".format(base_url, "orders"),
+            PLAN_URL="{}/{}".format(subscription_host, "plans"),
+            SUBSCRIBER_URL="{}/{}".format(subscription_host, "customers"),
+            SUBSCRIPTION_URL="{}/{}".format(subscription_host, "subscriptions"),
             PRE_APPROVAL_PAYMENT_URL="{}{}pre-approvals/payment".format(
                 base_url, version
             ),

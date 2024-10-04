@@ -60,6 +60,7 @@ class PagSeguro(object):
         self.checkout_session = None
         self.payment = {}
         self.holder = {}
+        self.subscription = {}
 
     def build_checkout_params(self, **kwargs):
         """build a dict with params"""
@@ -150,22 +151,47 @@ class PagSeguro(object):
         self.data.update(params)
         self.clean_none_params()
 
-    def build_pre_approval_payment_params(self, **kwargs):
+    def build_subscription(self, **kwargs):
         """build a dict with params"""
+        self.build_checkout_params(**kwargs)
 
+        params = None
         params = kwargs or {}
+        if self.subscription.get("plan_rference_id", None):
+            response = self.get_plan(reference_id=self.subscription["plan_rference_id"])
+            params["plan"] = {"id": response.get("plans", [])[0]["id"]}
+        else:
+            params["plan"] = {"id": self.subscription["plan_id"]}
 
-        params["reference"] = self.reference
-        params["preApprovalCode"] = self.code
+        if self.subscription.get("customer_id", None):
+            params["customer"] = {"id": self.subscription["customer_id"]}
+        elif self.subscription.get("customer_reference_id", None):
+            response = self.get_subscriber(
+                reference_id=self.subscription["customer_reference_id"]
+            )
+            params["customer"] = response.get("customers", [])[0]
+        else:
+            billing_info = {
+                "card": self.data["charge"]["payment_method"]["card"],
+                "type": "CREDIT_CARD",
+            }
+            params["customer"] = self.data["customer"]
+            params["customer"]["billing_info"] = billing_info
+        params["payment_method"] = {
+            "type": "CREDIT_CARD",
+            "card": {
+                "security_code": self.data["charge"]["payment_method"]["card"][
+                    "security_code"
+                ],
+            },
+        }
 
-        for i, item in enumerate(self.items, 1):
-            params["itemId%s" % i] = item.get("id")
-            params["itemDescription%s" % i] = item.get("description")
-            params["itemAmount%s" % i] = item.get("amount")
-            params["itemQuantity%s" % i] = item.get("quantity")
-            params["itemWeight%s" % i] = item.get("weight")
-            params["itemShippingCost%s" % i] = item.get("shipping_cost")
+        params["amount"] = self.data["charge"]["amount"]
+        params["best_invoice_date"] = self.subscription["best_invoice_date"]
 
+        params["reference_id"] = self.subscription["reference_id"]
+
+        self.data = {}
         self.data.update(params)
         self.clean_none_params()
 
@@ -205,8 +231,6 @@ class PagSeguro(object):
         self.build_checkout_params(**kwargs)
         response = self.post(url=self.config.ORDER_URL)
 
-        response_json = response.json()
-        response = PagSeguroCheckoutResponse(response_json, config=self.config)
         return response
 
     def transparent_checkout_session(self):
@@ -323,3 +347,46 @@ class PagSeguro(object):
 
     def add_item(self, **kwargs):
         self.items.append(kwargs)
+
+    def create_subscriber(self, **kwargs):
+        self.build_checkout_params(**kwargs)
+        response = self.post(url=self.config.SUBSCRIBER_URL)
+        return response
+
+    def get_subscriber(self, pag_id=None, reference_id=None):
+        url = self.config.SUBSCRIBER_URL
+        if reference_id:
+            url += "?reference_id=%s" % reference_id
+        response = self.get(url=url)
+        return response
+
+    def delete_subscriber(self, code):
+        response = self.delete(url=self.config.SUBSCRIBER_URL + code)
+        return response
+
+    def create_plan(self, plan):
+        response = self.post(url=self.config.PLAN_URL, data=plan)
+        return response
+
+    def get_plan(self, plan_id=None, reference_id=None):
+        url = self.config.PLAN_URL
+        if reference_id:
+            url = self.config.PLAN_URL + "?reference_id=%s" % reference_id
+        response = self.get(url=self.config.PLAN_URL)
+        return response
+
+    def delete_plan(self, code):
+        response = self.delete(url=self.config.PLAN_URL + code)
+        return response
+
+    def list_plans(self):
+        response = self.get(url=self.config.PLAN_URL)
+        return response
+
+    def create_signature(self, signature=None):
+        if signature:
+            self.data = signature
+        else:
+            self.build_subscription()
+        response = self.post(url=self.config.SUBSCRIPTION_URL, data=self.data)
+        return response
