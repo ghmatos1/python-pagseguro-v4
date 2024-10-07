@@ -3,8 +3,8 @@ class Config(dict):
     def __init__(self, **kwargs):
         sandbox = kwargs.pop("sandbox", False)
 
-        base_url = "https://ws.pagseguro.uol.com.br"
-        payment_host = "https://pagseguro.uol.com.br"
+        base_url = "https://api.pagseguro.com"
+        payment_host = "https://api.pagseguro.com"
         notification_host = "https://ws.pagseguro.uol.com.br"
         subscription_host = "https://api.assinaturas.pagseguro.com"
         if sandbox:
