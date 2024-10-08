@@ -13,7 +13,7 @@ class Config(dict):
             subscription_host = "https://sandbox.api.assinaturas.pagseguro.com"
 
         # prefixes/suffixes
-        version = "/v2/"
+        version = "/v3/"
         checkout_suffix = "{}checkout".format(version)
         session_checkout_suffix = "{}sessions/".format(version)
         notification_suffix = "{}transactions/notifications/%s".format("/v3/")

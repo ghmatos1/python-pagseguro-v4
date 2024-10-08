@@ -239,7 +239,8 @@ class PagSeguro(object):
 
     def check_notification(self, code):
         """check a notification by its code"""
-        response = self.get(url=self.config.NOTIFICATION_URL % code)
+        params = {"email": self.email, "token": self.token}
+        response = requests.get(url=self.config.NOTIFICATION_URL % code, params=params)
         return PagSeguroNotificationResponse(response.content, self.config)
 
     def check_pre_approval_notification(self, code):
