@@ -167,29 +167,36 @@ class PagSeguro(object):
 
         if self.subscription.get("customer_id", None):
             params["customer"] = {"id": self.subscription["customer_id"]}
-        elif self.subscription.get("customer_reference_id", None):
+        elif self.subscription.get(
+            "customer_reference_id", None
+        ) and self.subscription.get("search_by_reference_id", False):
             response = self.get_subscriber(
                 reference_id=self.subscription["customer_reference_id"]
             )
             params["customer"] = response.get("customers", [])[0]
         else:
             billing_info = {
-                "card": self.data["charge"]["payment_method"]["card"],
+                "card": self.data["charges"][0]["payment_method"]["card"],
                 "type": "CREDIT_CARD",
             }
             params["customer"] = self.data["customer"]
-            params["customer"]["billing_info"] = billing_info
-        params["payment_method"] = {
-            "type": "CREDIT_CARD",
-            "card": {
-                "security_code": self.data["charge"]["payment_method"]["card"][
-                    "security_code"
-                ],
-            },
-        }
+            params["customer"]["reference_id"] = self.subscription.get(
+                "customer_reference_id", None
+            )
+            params["customer"]["billing_info"] = [billing_info]
+        params["payment_method"] = [
+            {
+                "type": "CREDIT_CARD",
+                "card": {
+                    "security_code": self.data["charges"][0]["payment_method"]["card"][
+                        "security_code"
+                    ],
+                },
+            }
+        ]
 
-        params["amount"] = self.data["charge"]["amount"]
-        params["best_invoice_date"] = self.subscription["best_invoice_date"]
+        params["amount"] = self.data["charges"][0]["amount"]
+        params["best_invoice_date"] = self.subscription.get("best_invoice_date", {})
 
         params["reference_id"] = self.subscription["reference_id"]
 
@@ -220,13 +227,15 @@ class PagSeguro(object):
             value = value[len(self.reference_prefix) :]
         self._reference = value
 
-    def get(self, url):
+    def get(self, url, data=None, params=None):
         """do a get transaction"""
-        return requests.get(url, params=self.data, headers=self.config.HEADERS)
+        return requests.get(url, headers=self.headers)
 
-    def post(self, url):
+    def post(self, url, data=None):
         """do a post request"""
-        return requests.post(url, json=self.data, headers=self.headers)
+        if not data:
+            data = self.data
+        return requests.post(url, json=data, headers=self.headers)
 
     def checkout(self, transparent=False, **kwargs):
         """create a pagseguro checkout"""
@@ -375,7 +384,7 @@ class PagSeguro(object):
         url = self.config.PLAN_URL
         if reference_id:
             url = self.config.PLAN_URL + "?reference_id=%s" % reference_id
-        response = self.get(url)
+        response = requests.get(url, headers=self.headers)
         return response
 
     def delete_plan(self, code):
@@ -391,5 +400,5 @@ class PagSeguro(object):
             self.data = signature
         else:
             self.build_subscription()
-        response = self.post(url=self.config.SUBSCRIPTION_URL, data=self.data)
+        response = self.post(url=self.config.SUBSCRIPTION_URL)
         return response
