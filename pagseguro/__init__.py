@@ -157,8 +157,10 @@ class PagSeguro(object):
 
         params = None
         params = kwargs or {}
-        if self.subscription.get("plan_rference_id", None):
-            response = self.get_plan(reference_id=self.subscription["plan_rference_id"])
+        if self.subscription.get("plan_reference_id", None):
+            response = self.get_plan(
+                reference_id=self.subscription["plan_reference_id"]
+            )
             params["plan"] = {"id": response.get("plans", [])[0]["id"]}
         else:
             params["plan"] = {"id": self.subscription["plan_id"]}
@@ -373,7 +375,7 @@ class PagSeguro(object):
         url = self.config.PLAN_URL
         if reference_id:
             url = self.config.PLAN_URL + "?reference_id=%s" % reference_id
-        response = self.get(url=self.config.PLAN_URL)
+        response = self.get(url)
         return response
 
     def delete_plan(self, code):
