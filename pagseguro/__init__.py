@@ -237,16 +237,18 @@ class PagSeguro(object):
             data = self.data
         return requests.post(url, json=data, headers=self.headers)
 
+    def put(self, url, data=None):
+        """do a put request"""
+        if not data:
+            data = self.data
+        return requests.put(url, json=data, headers=self.headers)
+
     def checkout(self, transparent=False, **kwargs):
         """create a pagseguro checkout"""
         self.build_checkout_params(**kwargs)
         response = self.post(url=self.config.ORDER_URL)
 
         return response
-
-    def transparent_checkout_session(self):
-        response = self.post(url=self.config.SESSION_CHECKOUT_URL)
-        return PagSeguroCheckoutSession(response.content, config=self.config).session_id
 
     def check_notification(self, code):
         """check a notification by its code"""
@@ -360,6 +362,17 @@ class PagSeguro(object):
     def add_item(self, **kwargs):
         self.items.append(kwargs)
 
+    def update_subscriber_billing(self, customer_id, billing=None):
+        data = {}
+        if billing:
+            data = billing
+        else:
+            data = self.payment["method"]
+
+        url = self.config.SUBSCRIBER_URL + "/%s/billing_info" % customer_id
+        response = self.put(url=url, data=data)
+        return response
+
     def create_subscriber(self, **kwargs):
         self.build_checkout_params(**kwargs)
         response = self.post(url=self.config.SUBSCRIBER_URL)
@@ -395,10 +408,27 @@ class PagSeguro(object):
         response = self.get(url=self.config.PLAN_URL)
         return response
 
-    def create_signature(self, signature=None):
+    def create_subscription(self, signature=None):
         if signature:
             self.data = signature
         else:
             self.build_subscription()
         response = self.post(url=self.config.SUBSCRIPTION_URL)
+        return response
+
+    def get_subscription(self, pag_id=None, reference_id=None):
+        url = self.config.SUBSCRIPTION_URL
+        if reference_id:
+            url += "?reference_id=%s" % reference_id
+        response = self.get(url=url)
+        return response
+
+    def update_subscription(self, subscription_code, data):
+        url = self.config.SUBSCRIPTION_URL + "/%s" % subscription_code
+        response = self.put(url=url, data=data)
+        return response
+
+    def payment_retry(self, subscription_code):
+        url = self.config.SUBSCRIPTION_URL + "/%s/retry" % subscription_code
+        response = self.put(url=url)
         return response
