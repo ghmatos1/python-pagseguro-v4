@@ -105,9 +105,6 @@ class PagSeguro(object):
         if self.extra_amount:
             params["extraAmount"] = self.extra_amount
 
-        params["reference"] = self.reference
-        # params["receiverEmail"] = self.data["email"]
-
         if self.redirect_url:
             params["redirectURL"] = self.redirect_url
 
@@ -254,6 +251,7 @@ class PagSeguro(object):
         """check a notification by its code"""
         params = {"email": self.email, "token": self.token}
         response = requests.get(url=self.config.NOTIFICATION_URL % code, params=params)
+        print(response)
         return PagSeguroNotificationResponse(response.content, self.config)
 
     def check_pre_approval_notification(self, code):
@@ -370,7 +368,7 @@ class PagSeguro(object):
             data = self.payment["method"]
 
         url = self.config.SUBSCRIBER_URL + "/%s/billing_info" % customer_id
-        response = self.put(url=url, data=data)
+        response = self.put(url=url, data=[data])
         return response
 
     def create_subscriber(self, **kwargs):
