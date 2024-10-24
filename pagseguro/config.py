@@ -52,7 +52,7 @@ class Config(dict):
                 payment_host, checkout_suffix
             ),
             DATETIME_FORMAT="%Y-%m-%dT%H:%M:%S",
-            REFERENCE_PREFIX="REF%s",
+            REFERENCE_PREFIX="%s",
             USE_SHIPPING=True,
         )
 
