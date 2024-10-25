@@ -130,6 +130,7 @@ class PagSeguro(object):
             charge = {}
             charge["amount"] = self.payment.get("amount")
             charge["payment_method"] = self.payment.get("method")
+            charge["recurring"] = self.payment.get("recurring", None)
             params["charges"].append(charge)
             if self.payment["method"] == "BOLETO":
                 charge["payment_method"]["holder"] = {}
